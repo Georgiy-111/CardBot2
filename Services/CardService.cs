@@ -2,7 +2,7 @@
 
 namespace CardBot2.Services;
 
-public sealed class CardService
+public sealed class CardService : ICardService
 {
     private readonly List<Card> _cards =
     [

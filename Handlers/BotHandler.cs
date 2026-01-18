@@ -10,9 +10,9 @@ namespace CardBot2.Handlers;
 public class BotHandler
 {
     private readonly ITelegramBotClient _botClient;
-    private readonly CardService _cardService;
+    private readonly ICardService _cardService;
 
-    public BotHandler(ITelegramBotClient botClient, CardService cardService)
+    public BotHandler(ITelegramBotClient botClient, ICardService cardService)
     {
         _botClient = botClient;
         _cardService = cardService;
