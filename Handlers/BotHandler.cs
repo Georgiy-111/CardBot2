@@ -4,6 +4,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
 using Telegram.Bot.Types.ReplyMarkups;
+using CardBot2.UI;
 
 namespace CardBot2.Handlers;
 
@@ -74,20 +75,10 @@ public class BotHandler
     /// </summary>
     private async Task SendStartMessage(long chatId)
     {
-        var keyboard = new ReplyKeyboardMarkup(
-            new[]
-            {
-                new KeyboardButton[] { BotCommands.DrawCard }
-            })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = false
-        };
-
         await _botClient.SendTextMessageAsync(
             chatId: chatId,
             text: BotMessages.StartMessage,
-            replyMarkup: keyboard
+            replyMarkup: BotKeyboards.MainMenu
         );
     }
 
