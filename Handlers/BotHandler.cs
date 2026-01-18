@@ -3,7 +3,7 @@ using CardBot2.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
-using Telegram.Bot.Types.ReplyMarkups;
+using CardBot2.Context;
 using CardBot2.UI;
 
 namespace CardBot2.Handlers;
@@ -53,14 +53,16 @@ public class BotHandler
                 if (message?.Text == null)
                     continue;
 
-                switch (message.Text)
+                var context = new BotContext(message);
+
+                switch (context.MessageText)
                 {
                     case BotCommands.Start:
-                        await SendStartMessage(message.Chat.Id);
+                        await SendStartMessage(context);
                         break;
 
                     case BotCommands.DrawCard:
-                        await SendRandomCard(message.Chat.Id);
+                        await SendRandomCard(context);
                         break;
                 }
             }
@@ -73,10 +75,10 @@ public class BotHandler
     /// <summary>
     /// Отправляет стартовое сообщение и клавиатуру с кнопкой.
     /// </summary>
-    private async Task SendStartMessage(long chatId)
+    private async Task SendStartMessage(BotContext context)
     {
         await _botClient.SendTextMessageAsync(
-            chatId: chatId,
+            chatId: context.ChatId,
             text: BotMessages.StartMessage,
             replyMarkup: BotKeyboards.MainMenu
         );
@@ -85,14 +87,14 @@ public class BotHandler
     /// <summary>
     /// Получает случайную карту и отправляет её пользователю.
     /// </summary>
-    private async Task SendRandomCard(long chatId)
+    private async Task SendRandomCard(BotContext context)
     {
         var card = _cardService.GetRandomCard();
 
         if (!System.IO.File.Exists(card.ImagePath))
         {
             await _botClient.SendTextMessageAsync(
-                chatId,
+                context.ChatId,
                 BotMessages.CardNotFound
             );
             return;
@@ -101,7 +103,7 @@ public class BotHandler
         await using var stream = System.IO.File.OpenRead(card.ImagePath);
 
         await _botClient.SendPhotoAsync(
-            chatId: chatId,
+            chatId: context.ChatId,
             photo: new InputOnlineFile(
                 stream,
                 System.IO.Path.GetFileName(card.ImagePath)
