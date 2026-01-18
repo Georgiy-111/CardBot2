@@ -19,7 +19,7 @@ internal class Program
         var cardService = new CardService();
         var botHandler = new BotHandler(botClient, cardService);
 
-        Console.WriteLine("Бот работает. Нажать Ctrl+C что бы закрыть.");
+        Console.WriteLine("Бот работает. Нажмите Ctrl+C что бы закрыть.");
         await botHandler.HandleUpdatesAsync();
     }
 }
