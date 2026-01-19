@@ -1,23 +1,39 @@
-﻿using CardBot2.Services;
+﻿using CardBot2.Constants;
+using CardBot2.Services;
 using Telegram.Bot;
-using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InputFiles;
-using Telegram.Bot.Types.ReplyMarkups;
+using CardBot2.Context;
+using CardBot2.UI;
 
 namespace CardBot2.Handlers;
 
+/// <summary>
+/// Центральный обработчик Telegram-бота.
+/// 
+/// Отвечает за:
+/// - получение обновлений от Telegram API
+/// - разбор входящих сообщений
+/// - маршрутизацию команд (/start, вытянуть карту)
+/// 
+/// НЕ содержит бизнес-логики (как выбирается карта),
+/// она вынесена в сервисы.
+/// </summary>
 public class BotHandler
 {
     private readonly ITelegramBotClient _botClient;
-    private readonly CardService _cardService;
+    private readonly ICardService _cardService;
 
-    public BotHandler(ITelegramBotClient botClient, CardService cardService)
+    public BotHandler(ITelegramBotClient botClient, ICardService cardService)
     {
         _botClient = botClient;
         _cardService = cardService;
     }
 
+    /// <summary>
+    /// Основной цикл получения и обработки обновлений от Telegram.
+    /// Работает через long polling.
+    /// </summary>
     public async Task HandleUpdatesAsync()
     {
         int offset = 0;
@@ -37,51 +53,61 @@ public class BotHandler
                 if (message?.Text == null)
                     continue;
 
-                switch (message.Text)
+                var context = new BotContext(message);
+
+                switch (context.MessageText)
                 {
-                    case "/start":
-                        await SendStartMessage(message.Chat.Id);
+                    case BotCommands.Start:
+                        await SendStartMessage(context);
                         break;
-                    case "🃏 Вытянуть карту":
-                        await SendRandomCard(message.Chat.Id);
+
+                    case BotCommands.DrawCard:
+                        await SendRandomCard(context);
                         break;
                 }
             }
 
+            // Небольшая задержка, чтобы не спамить Telegram API
             await Task.Delay(500);
         }
     }
 
-    private async Task SendStartMessage(long chatId)
+    /// <summary>
+    /// Отправляет стартовое сообщение и клавиатуру с кнопкой.
+    /// </summary>
+    private async Task SendStartMessage(BotContext context)
     {
-        var keyboard = new ReplyKeyboardMarkup(
-            new[] { new KeyboardButton[] { "🃏 Вытянуть карту" } })
-        {
-            ResizeKeyboard = true,
-            OneTimeKeyboard = false
-        };
-
         await _botClient.SendTextMessageAsync(
-            chatId: chatId,
-            text: "Привет! Нажми кнопку чтобы вытянуть карту 🃏",
-            replyMarkup: keyboard
+            chatId: context.ChatId,
+            text: BotMessages.StartMessage,
+            replyMarkup: BotKeyboards.MainMenu
         );
     }
 
-    private async Task SendRandomCard(long chatId)
+    /// <summary>
+    /// Получает случайную карту и отправляет её пользователю.
+    /// </summary>
+    private async Task SendRandomCard(BotContext context)
     {
         var card = _cardService.GetRandomCard();
 
         if (!System.IO.File.Exists(card.ImagePath))
         {
-            await _botClient.SendTextMessageAsync(chatId, "Файл карты не найден");
+            await _botClient.SendTextMessageAsync(
+                context.ChatId,
+                BotMessages.CardNotFound
+            );
             return;
         }
 
         await using var stream = System.IO.File.OpenRead(card.ImagePath);
+
         await _botClient.SendPhotoAsync(
-            chatId: chatId,
-            photo: new InputOnlineFile(stream, System.IO.Path.GetFileName(card.ImagePath)),
+            chatId: context.ChatId,
+            photo: new InputOnlineFile(
+                stream,
+                System.IO.Path.GetFileName(card.ImagePath)
+            ),
             caption: $"{card.Name}\n\n{card.Description}"
         );
     }

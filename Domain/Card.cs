@@ -1,10 +1,32 @@
 ﻿namespace CardBot2.Domain;
 
+/// <summary>
+/// Доменная модель карты.
+/// Описывает одну карту, которая может быть выдана пользователю ботом.
+/// 
+/// ВАЖНО:
+/// - Этот класс не содержит логики
+/// - Не знает о Telegram
+/// - Не знает о файлах или JSON
+/// Используется как чистая модель данных (POCO).
+/// </summary>
 public class Card
 {
-    public string Name { get; init; } = null!;
+    /// <summary>
+    /// Отображаемое название карты.
+    /// Показывается пользователю в Telegram.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
 
-    public string Description { get; init; } = null!;
+    /// <summary>
+    /// Текстовое описание карты.
+    /// Используется как подпись под изображением.
+    /// </summary>
+    public string Description { get; set; } = string.Empty;
 
-    public string ImagePath { get; init; } = null!;
+    /// <summary>
+    /// Относительный путь к изображению карты в файловой системе.
+    /// Пример: Assets/cards/Card1.png
+    /// </summary>
+    public string ImagePath { get; set; } = string.Empty;
 }
