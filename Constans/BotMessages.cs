@@ -11,4 +11,7 @@ public static class BotMessages
 
     public const string CardNotFound =
         "Файл карты не найден 😔";
+    
+    public const string UnknownCommand =
+        "Я тебя не понял 🙂 Нажми кнопку в меню.";
 }

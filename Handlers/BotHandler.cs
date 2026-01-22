@@ -10,13 +10,10 @@ using Telegram.Bot.Types.InputFiles;
 namespace CardBot2.Handlers;
 
 /// <summary>
-/// Центральный обработчик входящих сообщений Telegram-бота.
-///
-/// НЕ управляет polling.
-/// Получает уже готовое Message и:
-/// - определяет команду
-/// - работает с состоянием пользователя
-/// - отправляет ответ
+/// Центральный обработчик сообщений Telegram-бота.
+/// 
+/// Обрабатывает входящие сообщения с учётом
+/// текущего состояния пользователя.
 /// </summary>
 public class BotHandler
 {
@@ -35,7 +32,7 @@ public class BotHandler
     }
 
     /// <summary>
-    /// Точка входа обработки одного сообщения.
+    /// Основная точка входа обработки одного сообщения.
     /// </summary>
     public async Task HandleAsync(Message message)
     {
@@ -43,8 +40,30 @@ public class BotHandler
             return;
 
         var context = new BotContext(message);
-        var currentState = _userStateService.GetState(context.ChatId);
+        var state = _userStateService.GetState(context.ChatId);
 
+        switch (state)
+        {
+            case UserState.None:
+            case UserState.MainMenu:
+                await HandleMainMenuState(context);
+                break;
+
+            case UserState.ViewingCard:
+                await HandleViewingCardState(context);
+                break;
+
+            default:
+                await SendUnknownCommand(context);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Обработка сообщений в состоянии главного меню.
+    /// </summary>
+    private async Task HandleMainMenuState(BotContext context)
+    {
         switch (context.MessageText)
         {
             case BotCommands.Start:
@@ -58,7 +77,29 @@ public class BotHandler
                 break;
 
             default:
-                // Неизвестные сообщения игнорируем
+                await SendUnknownCommand(context);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Обработка сообщений после показа карты.
+    /// </summary>
+    private async Task HandleViewingCardState(BotContext context)
+    {
+        switch (context.MessageText)
+        {
+            case BotCommands.DrawCard:
+                await SendRandomCard(context);
+                break;
+
+            case BotCommands.Start:
+                _userStateService.SetState(context.ChatId, UserState.MainMenu);
+                await SendStartMessage(context);
+                break;
+
+            default:
+                await SendUnknownCommand(context);
                 break;
         }
     }
@@ -96,4 +137,14 @@ public class BotHandler
             caption: $"{card.Name}\n\n{card.Description}"
         );
     }
+
+    private async Task SendUnknownCommand(BotContext context)
+    {
+        await _botClient.SendTextMessageAsync(
+            chatId: context.ChatId,
+            text: BotMessages.UnknownCommand,
+            replyMarkup: BotKeyboards.MainMenu
+        );
+    }
 }
+
