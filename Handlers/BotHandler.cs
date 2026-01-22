@@ -1,5 +1,6 @@
 ﻿using CardBot2.Constants;
 using CardBot2.Context;
+using CardBot2.Domain;
 using CardBot2.Services;
 using CardBot2.UI;
 using Telegram.Bot;
@@ -9,65 +10,59 @@ using Telegram.Bot.Types.InputFiles;
 namespace CardBot2.Handlers;
 
 /// <summary>
-/// Центральный обработчик сообщений Telegram-бота.
+/// Центральный обработчик входящих сообщений Telegram-бота.
 ///
-/// Класс НЕ управляет получением обновлений (polling).
-/// Он получает уже готовое Message и:
-/// - определяет, что за команда пришла
-/// - вызывает нужную бизнес-логику
-/// - отправляет ответ пользователю
-///
-/// Это делает код:
-/// - понятным
-/// - тестируемым
-/// - расширяемым
+/// НЕ управляет polling.
+/// Получает уже готовое Message и:
+/// - определяет команду
+/// - работает с состоянием пользователя
+/// - отправляет ответ
 /// </summary>
 public class BotHandler
 {
     private readonly ITelegramBotClient _botClient;
     private readonly ICardService _cardService;
+    private readonly IUserStateService _userStateService;
 
     public BotHandler(
         ITelegramBotClient botClient,
-        ICardService cardService)
+        ICardService cardService,
+        IUserStateService userStateService)
     {
         _botClient = botClient;
         _cardService = cardService;
+        _userStateService = userStateService;
     }
 
     /// <summary>
-    /// Основная точка входа для обработки входящего сообщения.
-    /// Вызывается из TelegramUpdateLoop.
+    /// Точка входа обработки одного сообщения.
     /// </summary>
     public async Task HandleAsync(Message message)
     {
-        // Защита от пустых сообщений (фото, стикеры и т.д.)
         if (message.Text == null)
             return;
 
-        // Оборачиваем Message в контекст
         var context = new BotContext(message);
+        var currentState = _userStateService.GetState(context.ChatId);
 
-        // Определяем команду
         switch (context.MessageText)
         {
             case BotCommands.Start:
+                _userStateService.SetState(context.ChatId, UserState.MainMenu);
                 await SendStartMessage(context);
                 break;
 
             case BotCommands.DrawCard:
+                _userStateService.SetState(context.ChatId, UserState.ViewingCard);
                 await SendRandomCard(context);
                 break;
 
             default:
-                // Неизвестная команда — можно игнорировать
+                // Неизвестные сообщения игнорируем
                 break;
         }
     }
 
-    /// <summary>
-    /// Отправляет приветственное сообщение и клавиатуру.
-    /// </summary>
     private async Task SendStartMessage(BotContext context)
     {
         await _botClient.SendTextMessageAsync(
@@ -77,14 +72,10 @@ public class BotHandler
         );
     }
 
-    /// <summary>
-    /// Получает случайную карту и отправляет её пользователю.
-    /// </summary>
     private async Task SendRandomCard(BotContext context)
     {
         var card = _cardService.GetRandomCard();
 
-        // Проверяем, существует ли файл изображения на диске
         if (!System.IO.File.Exists(card.ImagePath))
         {
             await _botClient.SendTextMessageAsync(
@@ -94,15 +85,13 @@ public class BotHandler
             return;
         }
 
-        // Открываем файл изображения как поток
         await using var stream = System.IO.File.OpenRead(card.ImagePath);
 
-        // Отправляем изображение пользователю
         await _botClient.SendPhotoAsync(
             chatId: context.ChatId,
             photo: new InputOnlineFile(
                 stream,
-                Path.GetFileName(card.ImagePath)
+                System.IO.Path.GetFileName(card.ImagePath)
             ),
             caption: $"{card.Name}\n\n{card.Description}"
         );
