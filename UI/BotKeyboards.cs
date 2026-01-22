@@ -4,19 +4,21 @@ using Telegram.Bot.Types.ReplyMarkups;
 namespace CardBot2.UI;
 
 /// <summary>
-/// Фабрика клавиатур Telegram-бота.
+/// Фабрика клавиатур для Telegram-бота.
 /// 
-/// Отвечает ТОЛЬКО за:
-/// - создание ReplyKeyboardMarkup
+/// Отвечает только за:
+/// - создание клавиатур (ReplyKeyboardMarkup или InlineKeyboardMarkup)
 /// - конфигурацию кнопок
 /// 
-/// Не содержит логики бота.
+/// Не содержит никакой бизнес-логики.
 /// </summary>
 public static class BotKeyboards
 {
     /// <summary>
     /// Главная клавиатура бота.
-    /// Используется после команды /start.
+    /// 
+    /// Используется после команды /start и в других сообщениях,
+    /// чтобы пользователь всегда видел кнопку для вытягивания карты.
     /// </summary>
     public static ReplyKeyboardMarkup MainMenu =>
         new(
@@ -28,7 +30,10 @@ public static class BotKeyboards
                 }
             })
         {
+            // Автоматически подгоняет размер кнопок под экран
             ResizeKeyboard = true,
+            
+            // Клавиатура остаётся на экране после нажатия кнопки
             OneTimeKeyboard = false
         };
 }

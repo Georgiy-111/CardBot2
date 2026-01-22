@@ -13,5 +13,5 @@ public static class BotMessages
         "Файл карты не найден 😔";
     
     public const string UnknownCommand =
-        "Я тебя не понял 🙂 Нажми кнопку в меню.";
+        "Я тебя не понял 🙂 Нажми кнопку 🃏 Вытянуть карту.";
 }

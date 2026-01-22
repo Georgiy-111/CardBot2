@@ -1,38 +1,29 @@
-﻿using CardBot2.Constants;
-using CardBot2.Context;
-using CardBot2.Domain;
-using CardBot2.Services;
-using CardBot2.UI;
+﻿using CardBot2.Context;
+using CardBot2.Handlers.Commands;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.InputFiles;
 
 namespace CardBot2.Handlers;
 
 /// <summary>
 /// Центральный обработчик сообщений Telegram-бота.
-/// 
-/// Обрабатывает входящие сообщения с учётом
-/// текущего состояния пользователя.
+/// Делегирует выполнение команд соответствующим ICommandHandler.
 /// </summary>
 public class BotHandler
 {
     private readonly ITelegramBotClient _botClient;
-    private readonly ICardService _cardService;
-    private readonly IUserStateService _userStateService;
+    private readonly IEnumerable<ICommandHandler> _handlers;
 
     public BotHandler(
         ITelegramBotClient botClient,
-        ICardService cardService,
-        IUserStateService userStateService)
+        IEnumerable<ICommandHandler> handlers)
     {
         _botClient = botClient;
-        _cardService = cardService;
-        _userStateService = userStateService;
+        _handlers = handlers;
     }
 
     /// <summary>
-    /// Основная точка входа обработки одного сообщения.
+    /// Обработка входящего текстового сообщения.
     /// </summary>
     public async Task HandleAsync(Message message)
     {
@@ -40,111 +31,22 @@ public class BotHandler
             return;
 
         var context = new BotContext(message);
-        var state = _userStateService.GetState(context.ChatId);
 
-        switch (state)
-        {
-            case UserState.None:
-            case UserState.MainMenu:
-                await HandleMainMenuState(context);
-                break;
-
-            case UserState.ViewingCard:
-                await HandleViewingCardState(context);
-                break;
-
-            default:
-                await SendUnknownCommand(context);
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Обработка сообщений в состоянии главного меню.
-    /// </summary>
-    private async Task HandleMainMenuState(BotContext context)
-    {
-        switch (context.MessageText)
-        {
-            case BotCommands.Start:
-                _userStateService.SetState(context.ChatId, UserState.MainMenu);
-                await SendStartMessage(context);
-                break;
-
-            case BotCommands.DrawCard:
-                _userStateService.SetState(context.ChatId, UserState.ViewingCard);
-                await SendRandomCard(context);
-                break;
-
-            default:
-                await SendUnknownCommand(context);
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Обработка сообщений после показа карты.
-    /// </summary>
-    private async Task HandleViewingCardState(BotContext context)
-    {
-        switch (context.MessageText)
-        {
-            case BotCommands.DrawCard:
-                await SendRandomCard(context);
-                break;
-
-            case BotCommands.Start:
-                _userStateService.SetState(context.ChatId, UserState.MainMenu);
-                await SendStartMessage(context);
-                break;
-
-            default:
-                await SendUnknownCommand(context);
-                break;
-        }
-    }
-
-    private async Task SendStartMessage(BotContext context)
-    {
-        await _botClient.SendTextMessageAsync(
-            chatId: context.ChatId,
-            text: BotMessages.StartMessage,
-            replyMarkup: BotKeyboards.MainMenu
+        var handler = _handlers.FirstOrDefault(
+            h => h.Command == context.MessageText
         );
-    }
 
-    private async Task SendRandomCard(BotContext context)
-    {
-        var card = _cardService.GetRandomCard();
-
-        if (!System.IO.File.Exists(card.ImagePath))
+        if (handler != null)
+        {
+            await handler.HandleAsync(context);
+        }
+        else
         {
             await _botClient.SendTextMessageAsync(
                 chatId: context.ChatId,
-                text: BotMessages.CardNotFound
+                text: "Я тебя не понял 🙂 Нажми кнопку 🃏 Вытянуть карту.",
+                replyMarkup: UI.BotKeyboards.MainMenu
             );
-            return;
         }
-
-        await using var stream = System.IO.File.OpenRead(card.ImagePath);
-
-        await _botClient.SendPhotoAsync(
-            chatId: context.ChatId,
-            photo: new InputOnlineFile(
-                stream,
-                System.IO.Path.GetFileName(card.ImagePath)
-            ),
-            caption: $"{card.Name}\n\n{card.Description}"
-        );
-    }
-
-    private async Task SendUnknownCommand(BotContext context)
-    {
-        await _botClient.SendTextMessageAsync(
-            chatId: context.ChatId,
-            text: BotMessages.UnknownCommand,
-            replyMarkup: BotKeyboards.MainMenu
-        );
     }
 }
-
