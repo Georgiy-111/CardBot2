@@ -24,10 +24,8 @@ public static class BotKeyboards
         new(
             new[]
             {
-                new KeyboardButton[]
-                {
-                    BotCommands.DrawCard
-                }
+                new KeyboardButton[] { BotCommands.DrawCard },
+                new KeyboardButton[] { BotCommands.Help}
             })
         {
             // Автоматически подгоняет размер кнопок под экран

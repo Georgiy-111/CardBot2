@@ -64,7 +64,7 @@ public class BotHandler
             case UserState.ViewingCard:
                 await _botClient.SendTextMessageAsync(
                     chatId: context.ChatId,
-                    text: $"Я тебя не понял 🙂 Нажми кнопку {BotCommands.DrawCard}.",
+                    text: $"Я тебя не понял 🙂 Нажми кнопку {BotCommands.DrawCard} или {BotCommands.Help}.",
                     replyMarkup: BotKeyboards.MainMenu
                 );
                 break;

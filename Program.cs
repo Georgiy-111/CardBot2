@@ -44,7 +44,9 @@ internal class Program
                 botClient,
                 cardService,
                 userStateService
-            )
+            ),
+            new Handlers.Commands.HelpCommandHandler(
+                botClient)
         };
 
         // Основной обработчик сообщений
