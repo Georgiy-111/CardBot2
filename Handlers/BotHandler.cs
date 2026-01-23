@@ -1,30 +1,38 @@
-﻿using CardBot2.Context;
+﻿using CardBot2.Constants;
+using CardBot2.Context;
+using CardBot2.Domain;
 using CardBot2.Handlers.Commands;
+using CardBot2.Services;
+using CardBot2.UI;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
 namespace CardBot2.Handlers;
 
 /// <summary>
-/// Центральный обработчик сообщений Telegram-бота.
-/// Делегирует выполнение команд соответствующим ICommandHandler.
+/// Центральный диспетчер сообщений Telegram-бота.
+/// 
+/// - принимает Message
+/// - определяет команду
+/// - делегирует обработку ICommandHandler
+/// - реагирует на неизвестные сообщения с учётом состояния пользователя
 /// </summary>
 public class BotHandler
 {
     private readonly ITelegramBotClient _botClient;
     private readonly IEnumerable<ICommandHandler> _handlers;
+    private readonly IUserStateService _userStateService;
 
     public BotHandler(
         ITelegramBotClient botClient,
-        IEnumerable<ICommandHandler> handlers)
+        IEnumerable<ICommandHandler> handlers,
+        IUserStateService userStateService)
     {
         _botClient = botClient;
         _handlers = handlers;
+        _userStateService = userStateService;
     }
 
-    /// <summary>
-    /// Обработка входящего текстового сообщения.
-    /// </summary>
     public async Task HandleAsync(Message message)
     {
         if (message.Text == null)
@@ -39,14 +47,34 @@ public class BotHandler
         if (handler != null)
         {
             await handler.HandleAsync(context);
+            return;
         }
-        else
+
+        // Если команда не распознана — реагируем по состоянию
+        await HandleUnknownMessage(context);
+    }
+
+    private async Task HandleUnknownMessage(BotContext context)
+    {
+        var state = _userStateService.GetState(context.ChatId);
+
+        switch (state)
         {
-            await _botClient.SendTextMessageAsync(
-                chatId: context.ChatId,
-                text: "Я тебя не понял 🙂 Нажми кнопку 🃏 Вытянуть карту.",
-                replyMarkup: UI.BotKeyboards.MainMenu
-            );
+            case UserState.MainMenu:
+            case UserState.ViewingCard:
+                await _botClient.SendTextMessageAsync(
+                    chatId: context.ChatId,
+                    text: $"Я тебя не понял 🙂 Нажми кнопку {BotCommands.DrawCard}.",
+                    replyMarkup: BotKeyboards.MainMenu
+                );
+                break;
+
+            default:
+                await _botClient.SendTextMessageAsync(
+                    chatId: context.ChatId,
+                    text: "Напиши /start чтобы начать."
+                );
+                break;
         }
     }
 }

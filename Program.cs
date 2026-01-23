@@ -36,14 +36,22 @@ internal class Program
         // Создание обработчиков команд
         var commandHandlers = new Handlers.Commands.ICommandHandler[]
         {
-            new Handlers.Commands.StartCommandHandler(botClient),
-            new Handlers.Commands.DrawCardCommandHandler(botClient, cardService)
+            new Handlers.Commands.StartCommandHandler(
+                botClient,
+                userStateService
+            ),
+            new Handlers.Commands.DrawCardCommandHandler(
+                botClient,
+                cardService,
+                userStateService
+            )
         };
 
         // Основной обработчик сообщений
         var botHandler = new BotHandler(
             botClient,
-            commandHandlers
+            commandHandlers,
+            userStateService
         );
 
         // Запуск цикла получения обновлений от Telegram
