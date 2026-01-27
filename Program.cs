@@ -7,10 +7,11 @@ namespace CardBot2;
 
 /// <summary>
 /// Точка входа приложения Telegram-бота.
-/// 
+///
 /// Задачи Program.cs:
 /// - считывает токен из переменной окружения
 /// - инициализирует все сервисы и обработчики команд
+/// - связывает зависимости между компонентами
 /// - запускает основной цикл получения обновлений (TelegramUpdateLoop)
 /// </summary>
 internal class Program
@@ -26,14 +27,14 @@ internal class Program
             );
         }
 
-        // Создание клиента Telegram API
+        // Клиент Telegram API
         var botClient = new TelegramBotClient(token);
 
         // Инициализация сервисов
         var cardService = new CardService();
         var userStateService = new UserStateService();
 
-        // Создание обработчиков команд
+        // Регистрация обработчиков команд
         var commandHandlers = new Handlers.Commands.ICommandHandler[]
         {
             new Handlers.Commands.StartCommandHandler(
@@ -46,10 +47,11 @@ internal class Program
                 userStateService
             ),
             new Handlers.Commands.HelpCommandHandler(
-                botClient)
+                botClient
+            )
         };
 
-        // Основной обработчик сообщений
+        // Центральный обработчик сообщений
         var botHandler = new BotHandler(
             botClient,
             commandHandlers,

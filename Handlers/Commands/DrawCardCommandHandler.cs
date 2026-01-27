@@ -1,6 +1,5 @@
 ﻿using CardBot2.Context;
 using CardBot2.Constants;
-using CardBot2.Domain;
 using CardBot2.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types.InputFiles;
@@ -9,6 +8,11 @@ namespace CardBot2.Handlers.Commands;
 
 /// <summary>
 /// Обработчик команды вытягивания карты.
+/// 
+/// Отвечает за:
+/// - получение случайной карты
+/// - отправку изображения и описания
+/// - перевод пользователя в состояние ViewingCard
 /// </summary>
 public class DrawCardCommandHandler : ICommandHandler
 {
@@ -26,8 +30,14 @@ public class DrawCardCommandHandler : ICommandHandler
         _userStateService = userStateService;
     }
 
+    /// <summary>
+    /// Команда, которую обрабатывает handler.
+    /// </summary>
     public string Command => BotCommands.DrawCard;
 
+    /// <summary>
+    /// Обрабатывает команду вытягивания карты.
+    /// </summary>
     public async Task HandleAsync(BotContext context)
     {
         var card = _cardService.GetRandomCard();
@@ -41,8 +51,11 @@ public class DrawCardCommandHandler : ICommandHandler
             return;
         }
 
-        // Обновляем состояние пользователя
-        _userStateService.SetState(context.ChatId, UserState.ViewingCard);
+        // Устанавливаем состояние пользователя
+        _userStateService.SetState(
+            context.ChatId,
+            Domain.UserState.ViewingCard
+        );
 
         await using var stream = System.IO.File.OpenRead(card.ImagePath);
 
