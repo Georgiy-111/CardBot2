@@ -6,36 +6,59 @@ using Telegram.Bot;
 namespace CardBot2;
 
 /// <summary>
-/// Точка входа приложения.
-/// 
-/// Отвечает за:
-/// - инициализацию зависимостей
-/// - запуск TelegramUpdateLoop
+/// Точка входа приложения Telegram-бота.
+///
+/// Задачи Program.cs:
+/// - считывает токен из переменной окружения
+/// - инициализирует все сервисы и обработчики команд
+/// - связывает зависимости между компонентами
+/// - запускает основной цикл получения обновлений (TelegramUpdateLoop)
 /// </summary>
 internal class Program
 {
     static async Task Main()
     {
+        // Получение токена из переменной окружения
         var token = Environment.GetEnvironmentVariable("TELEGRAM_TOKEN");
         if (string.IsNullOrWhiteSpace(token))
+        {
             throw new InvalidOperationException(
                 "Переменная окружения TELEGRAM_TOKEN не задана."
             );
+        }
 
+        // Клиент Telegram API
         var botClient = new TelegramBotClient(token);
 
-        // Сервисы
+        // Инициализация сервисов
         var cardService = new CardService();
         var userStateService = new UserStateService();
 
-        // Обработчик сообщений
+        // Регистрация обработчиков команд
+        var commandHandlers = new Handlers.Commands.ICommandHandler[]
+        {
+            new Handlers.Commands.StartCommandHandler(
+                botClient,
+                userStateService
+            ),
+            new Handlers.Commands.DrawCardCommandHandler(
+                botClient,
+                cardService,
+                userStateService
+            ),
+            new Handlers.Commands.HelpCommandHandler(
+                botClient
+            )
+        };
+
+        // Центральный обработчик сообщений
         var botHandler = new BotHandler(
             botClient,
-            cardService,
+            commandHandlers,
             userStateService
         );
 
-        // Цикл получения обновлений
+        // Запуск цикла получения обновлений от Telegram
         var updateLoop = new TelegramUpdateLoop(
             botClient,
             botHandler

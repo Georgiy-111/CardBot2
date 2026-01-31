@@ -7,4 +7,5 @@ public static class BotCommands
 {
     public const string Start = "/start";
     public const string DrawCard = "🃏 Вытянуть карту";
+    public const string Help =  "ℹ️ Как это работает";
 }

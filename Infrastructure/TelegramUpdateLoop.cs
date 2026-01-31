@@ -43,7 +43,7 @@ public class TelegramUpdateLoop
                 if (update.Type != UpdateType.Message)
                     continue;
 
-                await _botHandler.HandleAsync(update.Message!);
+                await _botHandler.HandleAsync(update.Message);
             }
 
             // Небольшая задержка, чтобы не спамить Telegram API
